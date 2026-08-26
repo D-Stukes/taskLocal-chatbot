@@ -1,26 +1,22 @@
 import { useState } from "react";
-import { authenticateDemoUser, DEMO_USERS } from "../auth/demoUsers";
+import { supabase } from "../lib/supabase";
 
-export default function Login({ onLogin }) {
+export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
-    const user = authenticateDemoUser(email, password);
-    if (!user) {
-      setError("Incorrect email or password.");
+    setError("");
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+    if (authError) {
+      setError(authError.message);
       return;
     }
-    setError("");
-    onLogin(user);
-  }
-
-  function useDemoCredentials() {
-    setEmail(DEMO_USERS[0].email);
-    setPassword(DEMO_USERS[0].password);
-    setError("");
   }
 
   return (
@@ -42,17 +38,7 @@ export default function Login({ onLogin }) {
           {error && <p className="login-error" role="alert">{error}</p>}
           <button type="submit" className="login-submit">Sign in</button>
         </form>
-        <div className="demo-credentials">
-          <strong>Demo credentials (same password for all)</strong>
-          {DEMO_USERS.map((user) => (
-            <span key={user.email}>{user.email}</span>
-          ))}
-          <span>Password: {DEMO_USERS[0].password}</span>
-          <button type="button" className="demo-fill" onClick={useDemoCredentials}>
-            Use demo account
-          </button>
-        </div>
-        <p className="login-notice">Frontend demo only. This is not secure authentication yet.</p>
+        <p className="login-notice">Sign in with your TaskLocal account.</p>
       </section>
     </main>
   );
