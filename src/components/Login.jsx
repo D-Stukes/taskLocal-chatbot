@@ -17,6 +17,12 @@ export default function Login({ onLogin }) {
     onLogin(user);
   }
 
+  function useDemoCredentials() {
+    setEmail(DEMO_USERS[0].email);
+    setPassword(DEMO_USERS[0].password);
+    setError("");
+  }
+
   return (
     <main className="login-shell">
       <section className="login-card" aria-labelledby="login-title">
@@ -40,6 +46,9 @@ export default function Login({ onLogin }) {
           <strong>Demo credentials</strong>
           <span>{DEMO_USERS[0].email}</span>
           <span>{DEMO_USERS[0].password}</span>
+          <button type="button" className="demo-fill" onClick={useDemoCredentials}>
+            Use demo account
+          </button>
         </div>
         <p className="login-notice">Frontend demo only. This is not secure authentication yet.</p>
       </section>
