@@ -2336,7 +2336,7 @@ function ProvidersColumn({ providersByGroup, onSelectProvider, selectedListingId
    Owns the shared in-memory dataset and the tool-calling logic
    the assistant's tools read and write.
    ============================================================ */
-export default function TaskLocalDashboard3Col() {
+export default function TaskLocalDashboard3Col({ user, onLogout }) {
   const [customers] = useState(() => parseCSV(CSV_CUSTOMERS));
   const [listings] = useState(() => parseCSV(CSV_LISTINGS).map((l) => ({
     ...l,
@@ -2580,21 +2580,26 @@ export default function TaskLocalDashboard3Col() {
               TaskLocal Chat Console
             </p>
           </div>
-          <label className="text-[11px] uppercase tracking-wider flex items-center gap-1.5" style={{ color: "#7C93B3" }}>
-            Viewing as
-            <select
-              value={currentCustomerId}
-              onChange={(e) => setCurrentCustomerId(e.target.value)}
-              className="text-[13px] px-1.5 py-0.5 rounded"
-              style={{ background: "#16233A", color: "#F5F3EE", border: "1px solid #23324A" }}
-            >
-              {customers.map((c) => (
-                <option key={c.customer_id} value={c.customer_id}>
-                  {c.customer_id}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="flex items-center gap-3">
+            <label className="text-[11px] uppercase tracking-wider flex items-center gap-1.5" style={{ color: "#7C93B3" }}>
+              Viewing as
+              <select
+                value={currentCustomerId}
+                onChange={(e) => setCurrentCustomerId(e.target.value)}
+                className="text-[13px] px-1.5 py-0.5 rounded"
+                style={{ background: "#16233A", color: "#F5F3EE", border: "1px solid #23324A" }}
+              >
+                {customers.map((c) => (
+                  <option key={c.customer_id} value={c.customer_id}>
+                    {c.customer_id}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button type="button" className="dashboard-logout" onClick={onLogout} title={`Signed in as ${user?.email}`}>
+              Sign out
+            </button>
+          </div>
         </div>
 
         {/* Top half: Ad + Chat Analytics stacked (left) | Providers (middle)

@@ -28,3 +28,141 @@ select,
 textarea {
   font: inherit;
 }
+
+.login-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #0f1b2e;
+  color: #f5f3ee;
+}
+
+.login-card {
+  width: min(100%, 420px);
+  padding: 40px;
+  border: 1px solid #2e4260;
+  border-radius: 18px;
+  background: #16233a;
+  box-shadow: 0 24px 70px rgb(0 0 0 / 28%);
+}
+
+.login-mark {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #39ff14;
+  color: #0f1b2e;
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 700;
+}
+
+.login-eyebrow {
+  margin: 24px 0 8px;
+  color: #39ff14;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.login-card h1 {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 32px;
+}
+
+.login-subtitle {
+  margin: 8px 0 28px;
+  color: #aab9cc;
+}
+
+.login-form {
+  display: grid;
+  gap: 18px;
+}
+
+.login-form label {
+  display: grid;
+  gap: 7px;
+  color: #d6dfeb;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.login-form input {
+  width: 100%;
+  padding: 12px 13px;
+  border: 1px solid #38506f;
+  border-radius: 8px;
+  outline: none;
+  background: #0f1b2e;
+  color: #f5f3ee;
+}
+
+.login-form input:focus {
+  border-color: #39ff14;
+  box-shadow: 0 0 0 3px rgb(57 255 20 / 12%);
+}
+
+.login-submit,
+.dashboard-logout {
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.login-submit {
+  margin-top: 4px;
+  padding: 12px;
+  background: #39ff14;
+  color: #0f1b2e;
+}
+
+.login-error {
+  margin: -4px 0 0;
+  color: #ff8f7a;
+  font-size: 13px;
+}
+
+.demo-credentials {
+  display: grid;
+  gap: 4px;
+  margin-top: 28px;
+  padding: 14px;
+  border-radius: 8px;
+  background: #0f1b2e;
+  color: #aab9cc;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.demo-credentials strong {
+  margin-bottom: 4px;
+  color: #f5f3ee;
+  font-family: "IBM Plex Sans", sans-serif;
+}
+
+.login-notice {
+  margin: 16px 0 0;
+  color: #7c93b3;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.dashboard-logout {
+  padding: 5px 9px;
+  border: 1px solid #38506f;
+  background: transparent;
+  color: #aab9cc;
+  font-size: 11px;
+}
+
+.dashboard-logout:hover {
+  border-color: #39ff14;
+  color: #39ff14;
+}
