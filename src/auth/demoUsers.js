@@ -1,5 +1,5 @@
 export const DEMO_USERS = [
-  { email: "demo@tasklocal.com", password: "TaskLocal123!", name: "Demo Operator" },
+  { email: "demo@tasklocal.com", password: "demo1234", name: "Demo Operator" },
 ];
 
 export function authenticateDemoUser(email, password) {
