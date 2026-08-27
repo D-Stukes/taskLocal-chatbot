@@ -1,5 +1,6 @@
 import TaskLocalDashboard3Col from "./components/TaskLocalDashboard3Col";
 import Login from "./components/Login";
+import SplashIntro from "./components/SplashIntro";
 import { useEffect, useState } from "react";
 import { supabase } from "./lib/supabase";
 
@@ -8,6 +9,16 @@ export default function App() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [profileError, setProfileError] = useState("");
+  // Show the jingle splash once per tab. sessionStorage keeps a soft reload
+  // (or any App re-render) from replaying it, while a brand-new visit still
+  // gets the intro.
+  const [introDone, setIntroDone] = useState(() => {
+    try {
+      return sessionStorage.getItem("tl-intro-seen") === "1";
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -60,6 +71,22 @@ export default function App() {
       mounted = false;
     };
   }, [user]);
+
+  if (!introDone) {
+    return (
+      <SplashIntro
+        onDone={() => {
+          try {
+            sessionStorage.setItem("tl-intro-seen", "1");
+          } catch {
+            // sessionStorage unavailable (private mode, etc.) — no problem,
+            // the intro just won't be suppressed on the next reload.
+          }
+          setIntroDone(true);
+        }}
+      />
+    );
+  }
 
   if (loading) return null;
   if (profileError) {

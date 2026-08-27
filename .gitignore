@@ -4,3 +4,10 @@ dist/
 .env
 .env.*
 !.env.example
+
+# Stale hand-assembled static build (superseded by the normal Vite build +
+# Vercel serverless deploy — see README).
+deploy/
+deploy 2/
+tasklocal-deploy*.zip
+.vercel
