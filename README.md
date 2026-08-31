@@ -17,17 +17,6 @@ Copy `.env.example` to `.env.local` and set the Supabase project URL and
 publishable key. In the Supabase dashboard, create users under
 **Authentication > Users**; those credentials are used by the sign-in form.
 
-Apply the profile schema before using the dashboard:
-
-```bash
-supabase login
-supabase link --project-ref bikimbnqtvbqzprfgzfj
-supabase db push
-```
-
-The migration creates `public.profiles`, enables row-level security, creates a
-profile for new Auth users, and backfills existing users.
-
 For deployment, add the same `VITE_SUPABASE_URL` and
 `VITE_SUPABASE_PUBLISHABLE_KEY` variables in the host's environment settings,
 then redeploy. Only the publishable key belongs in this frontend. Never put a
