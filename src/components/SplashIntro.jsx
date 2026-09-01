@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import jingleUrl from "../assets/tasklocal-jingle.m4a";
 import logoUrl from "../assets/tasklocal-logo.png";
 
-// How long the animated splash stays up before it fades into the app, once
-// it has actually started (after the visitor taps in). The jingle file is
-// ~14s; we don't hold the user that long — it plays under the splash and
-// gets faded out when we leave.
-const SPLASH_MS = 5500;
+// Safety-net only: if the jingle's "ended" event never fires for some reason
+// (audio blocked, file swapped for something that fails to play, etc.), don't
+// leave the visitor stuck on the splash forever -- move on after this long.
+// The jingle itself is what normally decides when the splash finishes.
+const SPLASH_FALLBACK_MS = 16000;
 
 // Safety valve: if the logo or jingle somehow never finish loading (flaky
 // connection, blocked request), don't leave the visitor stuck on a bare
@@ -86,13 +86,16 @@ export default function SplashIntro({ onDone }) {
   useEffect(() => {
     if (!started) return; // hold off starting the countdown until the visitor has tapped in
 
+    const audio = audioRef.current;
+
     const finish = () => {
       if (finishedRef.current) return;
       finishedRef.current = true;
 
-      const audio = audioRef.current;
       if (audio) {
-        // Quick fade so the jingle doesn't cut off abruptly.
+        // Quick fade so the jingle doesn't cut off abruptly (relevant if the
+        // fallback timer is what triggered this, since a natural "ended" has
+        // already finished on its own with nothing to fade).
         const fade = window.setInterval(() => {
           if (audio.volume > 0.1) {
             audio.volume = Math.max(0, audio.volume - 0.1);
@@ -108,9 +111,20 @@ export default function SplashIntro({ onDone }) {
     };
 
     finishRef.current = finish;
-    const timer = window.setTimeout(finish, SPLASH_MS);
 
-    return () => window.clearTimeout(timer);
+    // Let the jingle's own length decide when the splash ends, instead of a
+    // fixed timer guessing at it -- that's what was cutting the jingle off
+    // early. The timer below is only a safety net in case "ended" never
+    // fires.
+    if (audio) {
+      audio.addEventListener("ended", finish);
+    }
+    const fallback = window.setTimeout(finish, SPLASH_FALLBACK_MS);
+
+    return () => {
+      if (audio) audio.removeEventListener("ended", finish);
+      window.clearTimeout(fallback);
+    };
   }, [started]);
 
   // Called directly from the tap, in the same click event -- this is what
