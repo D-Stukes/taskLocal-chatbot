@@ -6,7 +6,7 @@ import logoUrl from "../assets/tasklocal-logo.png";
 // it has actually started (after the visitor taps in). The jingle file is
 // ~14s; we don't hold the user that long — it plays under the splash and
 // gets faded out when we leave.
-const SPLASH_MS = 4500;
+const SPLASH_MS = 5500;
 
 // Safety valve: if the logo or jingle somehow never finish loading (flaky
 // connection, blocked request), don't leave the visitor stuck on a bare
