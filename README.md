@@ -13,6 +13,28 @@ npm run dev
 
 Create a production build with `npm run build`.
 
+### Supabase configuration (optional)
+
+This app can read live data from the shared TaskLocal Supabase project that
+Products A, B, and D also use, instead of its bundled CSV demo data. It is
+optional: with no Supabase project configured, the dashboard runs entirely
+on the bundled CSV data, unchanged.
+
+Copy `.env.example` to `.env.local` and set `VITE_SUPABASE_URL` and
+`VITE_SUPABASE_PUBLISHABLE_KEY` to the shared project's values. For
+deployment, add the same two variables in the host's environment settings,
+then redeploy. Only the publishable key belongs in this frontend. Never put
+a secret key or access token in `.env.local`, source code, or deployment
+frontend variables.
+
+Today, only the `listings` table is publicly readable by an anonymous
+client, so it is the only source that actually goes live; `customers`,
+`bookings`, `trust_safety`, and `chatbot_requests` are wired up the same
+way and will start showing live data automatically if the shared project's
+access rules are ever opened up to allow it, but for now they keep showing
+the bundled CSV data (this is expected, not a bug -- see the comment above
+the data-loading `useEffect` in `TaskLocalDashboard3Col.jsx`).
+
 ## Structure
 
 - `src/main.jsx` mounts the React application.
