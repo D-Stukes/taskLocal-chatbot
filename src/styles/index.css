@@ -163,6 +163,11 @@ textarea {
   color: #0f1b2e;
 }
 
+.login-submit.compact {
+  padding: 10px 8px;
+  font-size: 12px;
+}
+
 .login-submit.secondary {
   background: transparent;
   color: #34d399;

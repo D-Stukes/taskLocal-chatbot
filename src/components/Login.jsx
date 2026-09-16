@@ -102,25 +102,28 @@ export default function Login({ onLogin }) {
           <div className="login-btn-row">
             {mode === "signin" ? (
               <>
-                <button type="submit" className="login-submit">
+                <button type="submit" className="login-submit compact">
                   Sign in
                 </button>
                 <button
                   type="button"
-                  className="login-submit secondary"
+                  className="login-submit secondary compact"
                   onClick={() => switchMode("signup")}
                 >
                   Sign up
                 </button>
+                <button type="button" className="login-submit secondary compact" onClick={useDemoCredentials}>
+                  Use Demo Account
+                </button>
               </>
             ) : (
               <>
-                <button type="submit" className="login-submit">
+                <button type="submit" className="login-submit compact">
                   Create account
                 </button>
                 <button
                   type="button"
-                  className="login-submit secondary"
+                  className="login-submit secondary compact"
                   onClick={() => switchMode("signin")}
                 >
                   Back to sign in
@@ -130,14 +133,6 @@ export default function Login({ onLogin }) {
           </div>
         </form>
 
-        <div className="demo-credentials">
-          <strong>Demo account</strong>
-          <span>{DEMO_USERS[0].email}</span>
-          <span>Password: {DEMO_USERS[0].password}</span>
-          <button type="button" className="demo-fill" onClick={useDemoCredentials}>
-            Use demo account
-          </button>
-        </div>
         <p className="login-notice">
           {mode === "signin"
             ? "Frontend demo only. This is not secure authentication yet."
