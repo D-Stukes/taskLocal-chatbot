@@ -12,3 +12,4 @@ deploy 2/
 tasklocal-deploy*.zip
 .vercel
 src/components/OLDSplashIntro Files/
+.env*
