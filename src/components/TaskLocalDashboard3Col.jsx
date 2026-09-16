@@ -1089,11 +1089,16 @@ const TaskLocalChat = React.forwardRef(function TaskLocalChat({ runTool, current
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [voiceMode, setVoiceMode] = useState(false);
+  const voiceModeRef = useRef(false);
   const [isListening, setIsListening] = useState(false);
   const [speechRecognitionSupported, setSpeechRecognitionSupported] = useState(false);
   const [micTooltipVisible, setMicTooltipVisible] = useState(false);
   const selectedVoiceRef = useRef(null);
   const recognitionRef = useRef(null);
+
+  useEffect(() => {
+    voiceModeRef.current = voiceMode;
+  }, [voiceMode]);
   const [availableVoices, setAvailableVoices] = useState([]);
   const [selectedVoiceName, setSelectedVoiceName] = useState("");
 
@@ -1204,7 +1209,7 @@ const TaskLocalChat = React.forwardRef(function TaskLocalChat({ runTool, current
   // slightly per persona so each voice feels a little different. Silently
   // does nothing if the browser/embed context doesn't support it.
   function speak(text, serviceId) {
-    if (!voiceMode) return;
+    if (!voiceModeRef.current) return;
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
     try {
       window.speechSynthesis.cancel();
