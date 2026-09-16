@@ -1085,6 +1085,7 @@ const TaskLocalChat = React.forwardRef(function TaskLocalChat({ runTool, current
         "Hi, I'm Ava, TaskLocal's AI service manager. I can help with cleaning, handyman, or moving jobs — quotes, tracking, rescheduling, or getting you to a human. What's going on today?",
     },
   ]);
+  const messagesRef = useRef(messages);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -1099,6 +1100,10 @@ const TaskLocalChat = React.forwardRef(function TaskLocalChat({ runTool, current
   useEffect(() => {
     voiceModeRef.current = voiceMode;
   }, [voiceMode]);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
   const [availableVoices, setAvailableVoices] = useState([]);
   const [selectedVoiceName, setSelectedVoiceName] = useState("");
 
@@ -1314,7 +1319,8 @@ const TaskLocalChat = React.forwardRef(function TaskLocalChat({ runTool, current
       if (detected && detected !== activeService) setActiveService(detected);
     }
 
-    const nextMessages = [...messages, { role: "user", content: trimmed }];
+    const nextMessages = [...messagesRef.current, { role: "user", content: trimmed }];
+    messagesRef.current = nextMessages;
     setMessages(nextMessages);
     setInput("");
     setLoading(true);
