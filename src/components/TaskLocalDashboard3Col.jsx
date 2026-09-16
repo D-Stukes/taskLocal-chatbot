@@ -722,7 +722,7 @@ const TOOL_SCHEMAS = [
 const SERVICES = [
   {
     id: "cleaning",
-    label: "Cleaning Services",
+    label: "Cleaning",
     ticket: "CLN",
     blurb: "Home & apartment cleaning, deep cleans, move-out cleans.",
     agentName: "Cleaning Services AI Assistant",
@@ -732,7 +732,7 @@ const SERVICES = [
   },
   {
     id: "handyman",
-    label: "Handy Work Services",
+    label: "Handy Work",
     ticket: "HDY",
     blurb: "Repairs, mounting, assembly, small installs & fixes.",
     agentName: "Handy Work AI Assistant",
@@ -742,7 +742,7 @@ const SERVICES = [
   },
   {
     id: "moving",
-    label: "Moving Services",
+    label: "Moving",
     ticket: "MOV",
     blurb: "Local moves, loading help, furniture transport.",
     agentName: "Moving Services AI Assistant",
@@ -766,6 +766,8 @@ const QUICK_ACTIONS = [
   "Show me my bookings",
   "Any safety reports I should know about?",
 ];
+
+const QUICK_ACTION_PLACEHOLDER = "Select a Request";
 
 const SYSTEM_PROMPT = `You are the customer service assistant for TaskLocal — a local two-sided marketplace connecting customers with independent providers for three services: CLEANING, HANDYMAN work, and MOVING.
 
@@ -810,12 +812,9 @@ function TypingDots() {
     </div>
   );
 }
-
 // ---------- Full-body, animated persona illustrations ----------
 // Shared palette: navy #1B2B44, orange #FF6B35, cream #F5F3EE, slate #7C93B3
-// Skin tones vary by persona so the team reads as a diverse group:
 //   Ava (light, #F2C9A0) · Rosa (tan, #C98A54) · Mike (deep brown, #6B4423) · Movers (warm tan, #E3B686)
-// All characters live inside a ".bot-bob" wrapper (idle up/down breathing motion).
 // Each has blinking eyes (".bot-eye") and one signature looping gesture.
 
 function Ground() {
@@ -1090,7 +1089,11 @@ const TaskLocalChat = React.forwardRef(function TaskLocalChat({ runTool, current
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [voiceMode, setVoiceMode] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [speechRecognitionSupported, setSpeechRecognitionSupported] = useState(false);
+  const [micTooltipVisible, setMicTooltipVisible] = useState(false);
   const selectedVoiceRef = useRef(null);
+  const recognitionRef = useRef(null);
   const [availableVoices, setAvailableVoices] = useState([]);
   const [selectedVoiceName, setSelectedVoiceName] = useState("");
 
@@ -1133,6 +1136,44 @@ const TaskLocalChat = React.forwardRef(function TaskLocalChat({ runTool, current
     }
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition) return;
+
+    const recognition = new Recognition();
+    recognition.lang = "en-US";
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = (event) => {
+      setIsListening(false);
+      if (event.error !== "aborted" && event.error !== "no-speech") {
+        setError("Microphone access is unavailable. You can still type your message.");
+      }
+    };
+    recognition.onresult = (event) => {
+      let transcript = "";
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        transcript += event.results[index][0].transcript;
+      }
+      const cleanedTranscript = transcript.trim();
+      if (!cleanedTranscript) return;
+      setInput(cleanedTranscript);
+      if (event.results[event.results.length - 1].isFinal) {
+        sendMessage(cleanedTranscript);
+      }
+    };
+    recognitionRef.current = recognition;
+    setSpeechRecognitionSupported(true);
+
+    return () => {
+      recognition.abort();
+      recognitionRef.current = null;
+    };
+  }, []);
+
   function handleVoiceChange(name) {
     setSelectedVoiceName(name);
     const match = availableVoices.find((v) => v.name === name);
@@ -1152,6 +1193,7 @@ const TaskLocalChat = React.forwardRef(function TaskLocalChat({ runTool, current
   const curatedVoices = availableVoices.filter((v) => KNOWN_GOOD_VOICE_PATTERNS.some((p) => p.test(v.name)));
   const voiceOptions = curatedVoices.length ? curatedVoices : availableVoices;
   const scrollRef = useRef(null);
+  const quickRequestScrollRef = useRef(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -1192,11 +1234,33 @@ const TaskLocalChat = React.forwardRef(function TaskLocalChat({ runTool, current
   function toggleVoiceMode() {
     setVoiceMode((v) => {
       const next = !v;
+      if (!next && recognitionRef.current) {
+        recognitionRef.current.abort();
+      }
       if (!next && typeof window !== "undefined" && "speechSynthesis" in window) {
         window.speechSynthesis.cancel();
       }
       return next;
     });
+  }
+
+  function toggleListening() {
+    if (loading) return;
+    if (!voiceMode) toggleVoiceMode();
+    if (!recognitionRef.current) {
+      setError("Voice input is not supported in this browser. You can still type your message.");
+      return;
+    }
+    if (isListening) {
+      recognitionRef.current.stop();
+      return;
+    }
+    setError(null);
+    try {
+      recognitionRef.current.start();
+    } catch (e) {
+      setIsListening(false);
+    }
   }
 
   function selectServiceTab(id) {
@@ -1292,6 +1356,8 @@ const TaskLocalChat = React.forwardRef(function TaskLocalChat({ runTool, current
       const message =
         e && e.name === "AbortError"
           ? "This is taking too long to respond — the connection may be unavailable in this preview. Try again, or try this outside the embedded preview."
+          : e && e.message && e.message.includes("API error 404")
+          ? "The local chat API is not available in this preview. Start the backend route and try again."
           : "Support is having trouble connecting. Try again in a moment.";
       setError(message);
     } finally {
@@ -1312,13 +1378,13 @@ const TaskLocalChat = React.forwardRef(function TaskLocalChat({ runTool, current
       style={{ background: "#0F1B2E", fontFamily: "'IBM Plex Sans', sans-serif" }}
     >
       <div
-        className="w-full max-w-md rounded-none border-2 flex flex-col overflow-hidden"
+        className="chat-frame w-full max-w-md rounded-none border-2 flex flex-col overflow-hidden"
         style={{
           background: "#F5F3EE",
           borderColor: "#1B2B44",
           minHeight: "660px",
           maxHeight: "95vh",
-          boxShadow: "8px 8px 0 #1B2B44",
+          boxShadow: "inset 0 0 0 5.4px #FFF2A6, inset 0 0 10px rgba(255, 242, 166, 0.4), 8px 8px 0 #1B2B44",
         }}
       >
         {/* Top strip */}
@@ -1350,27 +1416,6 @@ const TaskLocalChat = React.forwardRef(function TaskLocalChat({ runTool, current
             {voiceMode ? "🔊 Voice — pause / switch to text" : "💬 Text — switch to voice"}
           </button>
 
-          {voiceMode && availableVoices.length > 0 && (
-            <div>
-              <label className="text-[10px] uppercase tracking-wider block mb-1" style={{ color: "#7C93B3", fontFamily: "'Space Grotesk', sans-serif" }}>
-                Select a voice style
-              </label>
-              <select
-                value={selectedVoiceName}
-                onChange={(e) => handleVoiceChange(e.target.value)}
-                className="w-full text-[11px] px-2 py-1.5 rounded-lg"
-                style={{ background: "transparent", color: "#7C93B3", border: "1px solid #3A4C6B" }}
-                title="Choose which voice reads replies aloud"
-              >
-                {voiceOptions.map((v) => (
-                  <option key={v.name} value={v.name}>
-
-                    {v.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
         </div>
 
         {/* Persona stage — full body, animated */}
@@ -1447,13 +1492,30 @@ const TaskLocalChat = React.forwardRef(function TaskLocalChat({ runTool, current
 
         {/* Service tabs */}
         <div className="flex gap-1.5 px-4 pt-3 shrink-0">
+          <button
+            onClick={() => {
+              setActiveService(null);
+              setManualOverride(false);
+            }}
+            className="text-[13px] font-semibold py-1 px-1 transition-colors"
+            style={{
+              flex: "0.55 1 0%",
+              fontFamily: "'Space Grotesk', sans-serif",
+              background: activeService === null ? "#FF6B35" : "transparent",
+              color: activeService === null ? "#1B2B44" : "#7C93B3",
+              border: `1px solid ${activeService === null ? "#FF6B35" : "#B9C2D0"}`,
+            }}
+            title="Switch to Ava, the AI Service Manager"
+          >
+            Ava
+          </button>
           {SERVICES.map((s) => {
             const isActive = activeService === s.id;
             return (
               <button
                 key={s.id}
                 onClick={() => selectServiceTab(s.id)}
-                className="flex-1 text-[11px] font-semibold py-1.5 px-1 transition-colors"
+                className="flex-1 text-[13px] font-semibold py-1 px-1 transition-colors"
                 style={{
                   fontFamily: "'Space Grotesk', sans-serif",
                   background: isActive ? "#FF6B35" : "transparent",
@@ -1469,14 +1531,19 @@ const TaskLocalChat = React.forwardRef(function TaskLocalChat({ runTool, current
         </div>
 
         {/* Messages */}
-        <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-3">
+        <div
+          ref={scrollRef}
+          className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-3"
+          style={{ borderTop: "2px solid #B9C2D0", marginTop: "12px" }}
+        >
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
               <div
-                className="max-w-[82%] px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap"
+                className={`${m.role === "assistant" ? "w-full leading-snug" : "max-w-[96%] leading-relaxed"} px-3 py-2 text-sm whitespace-pre-wrap`}
                 style={{
-                  background: m.role === "user" ? "#1B2B44" : "#FFFFFF",
-                  color: m.role === "user" ? "#F5F3EE" : "#1B2B44",
+                  background: m.role === "user" ? "rgb(194, 238, 255)" : "#FFFFFF",
+                  color: "#1B2B44",
+                  fontWeight: m.role === "user" ? 700 : 400,
                   border: m.role === "user" ? "none" : "1px solid #D8D3C4",
                   borderRadius: m.role === "user" ? "10px 10px 2px 10px" : "10px 10px 10px 2px",
                 }}
@@ -1502,28 +1569,8 @@ const TaskLocalChat = React.forwardRef(function TaskLocalChat({ runTool, current
           )}
         </div>
 
-        {/* Quick actions */}
-        <div className="px-3 pb-2 flex flex-wrap gap-1.5 shrink-0">
-          {QUICK_ACTIONS.map((qa) => (
-            <button
-              key={qa}
-              onClick={() => sendMessage(qa)}
-              disabled={loading}
-              className="text-[11px] px-2.5 py-1 rounded-full disabled:opacity-40"
-              style={{
-                background: "#EDE9DD",
-                color: "#1B2B44",
-                border: "1px solid #D8D3C4",
-                fontFamily: "'Space Grotesk', sans-serif",
-              }}
-            >
-              {qa}
-            </button>
-          ))}
-        </div>
-
         {/* Input */}
-        <div className="flex gap-2 p-3 pt-1 shrink-0" style={{ borderTop: "1px solid #D8D3C4" }}>
+        <div className="flex gap-2 p-3 pt-2 shrink-0" style={{ borderTop: "1px solid #D8D3C4" }}>
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -1543,23 +1590,182 @@ const TaskLocalChat = React.forwardRef(function TaskLocalChat({ runTool, current
               color: "#1B2B44",
             }}
           />
+          {(
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={toggleListening}
+                onMouseEnter={() => setMicTooltipVisible(true)}
+                onMouseLeave={() => setMicTooltipVisible(false)}
+                onFocus={() => setMicTooltipVisible(true)}
+                onBlur={() => setMicTooltipVisible(false)}
+                disabled={loading}
+                className="h-10 w-10 shrink-0 flex items-center justify-center disabled:cursor-not-allowed"
+                style={{
+                  background: isListening ? "#FF6B35" : "#EDE9DD",
+                  color: "#1B2B44",
+                  border: "1px solid #D8D3C4",
+                  borderRadius: "50%",
+                }}
+                aria-label={isListening ? "Stop listening" : "Click to speak into the mic"}
+              >
+                {isListening ? (
+                  <span className="text-xl font-bold leading-none">■</span>
+                ) : (
+                  <span className="text-3xl leading-none" aria-hidden="true">🎙</span>
+                )}
+              </button>
+              {micTooltipVisible && (
+                <span
+                  role="tooltip"
+                  className="absolute bottom-full right-0 mb-2 whitespace-nowrap px-2 py-1 text-[10px] font-semibold z-40"
+                  style={{ background: "#1B2B44", color: "#F5F3EE", border: "1px solid #B9C2D0", borderRadius: "4px" }}
+                >
+                  {isListening
+                    ? "Stop listening"
+                    : speechRecognitionSupported
+                    ? "Click to speak into the mic"
+                    : "Voice input is not supported in this browser"}
+                </span>
+              )}
+            </div>
+          )}
           <button
             type="button"
             onClick={() => sendMessage(input)}
             disabled={loading || !input.trim()}
-            className="px-4 py-2 text-sm font-semibold disabled:opacity-40"
+            className="h-9 w-9 shrink-0 text-lg font-bold leading-none disabled:cursor-not-allowed"
             style={{
-              background: "#FF6B35",
-              color: "#1B2B44",
-              borderRadius: "6px",
+              background: loading || !input.trim() ? "#AAB3BE" : "#6FA07E",
+              color: "#FFFFFF",
+              borderRadius: "50%",
               fontFamily: "'Space Grotesk', sans-serif",
             }}
+            aria-label="Send message"
+            title="Send message"
           >
-            Send
+            ↑
           </button>
         </div>
 
+        {/* Quick actions */}
+        <div className="px-3 pb-3 shrink-0">
+          <div className="flex" style={{ height: "68px" }} aria-label="Service request options">
+            <div
+              ref={quickRequestScrollRef}
+              className="flex-1 overflow-y-auto"
+              style={{
+                background: "#EDE9DD",
+                border: "1px solid #D8D3C4",
+                borderRight: 0,
+                borderRadius: "6px 0 0 6px",
+              }}
+            >
+              <button
+                type="button"
+                disabled={loading}
+                className="w-full text-left text-[13px] px-2.5 py-0 font-bold leading-[0.83] disabled:opacity-40"
+                style={{ color: "#1B2B44", fontFamily: "'Space Grotesk', sans-serif", lineHeight: "9px" }}
+              >
+                {QUICK_ACTION_PLACEHOLDER}
+              </button>
+              {QUICK_ACTIONS.map((qa) => (
+                <button
+                  key={qa}
+                  type="button"
+                  onClick={() => sendMessage(qa)}
+                  disabled={loading}
+                  className="w-full text-left text-[13px] px-2.5 py-0 leading-[0.83] disabled:opacity-40"
+                  style={{ color: "#1B2B44", fontFamily: "'Space Grotesk', sans-serif", lineHeight: "9px" }}
+                >
+                  {qa}
+                </button>
+              ))}
+            </div>
+            <div
+              className="flex w-6 flex-col"
+              style={{ border: "1px solid #D8D3C4", borderRadius: "0 6px 6px 0", overflow: "hidden" }}
+            >
+              <button
+                type="button"
+                onClick={() => quickRequestScrollRef.current?.scrollBy({ top: -48, behavior: "smooth" })}
+                disabled={loading}
+                className="h-6 shrink-0 text-xs font-bold disabled:opacity-40"
+                style={{ background: "#D8D3C4", color: "#1B2B44" }}
+                aria-label="Scroll service requests up"
+              >
+                ^
+              </button>
+              <button
+                type="button"
+                onClick={() => quickRequestScrollRef.current?.scrollBy({ top: 48, behavior: "smooth" })}
+                disabled={loading}
+                className="h-6 shrink-0 text-xs font-bold disabled:opacity-40"
+                style={{ background: "#D8D3C4", color: "#1B2B44", borderTop: "1px solid #B9C2D0" }}
+                aria-label="Scroll service requests down"
+              >
+                v
+              </button>
+            </div>
+          </div>
+        </div>
+
         <style>{`
+          .chat-frame {
+            position: relative;
+            animation: chatGoldPulse 2.6s ease-in-out infinite;
+          }
+          .chat-frame::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: 30;
+            box-sizing: border-box;
+            padding: 5.4px;
+            background:
+              repeating-conic-gradient(
+              from var(--shine-angle),
+              transparent 0deg 20deg,
+              rgba(252, 252, 211, 0.161) 22deg,
+              #FFF2A6 24deg,
+              #FFEA00 28deg,
+              #FFFF66 34deg,
+              #FFFFFF 39deg,
+              #FFFF66 44deg,
+              #FFEA00 50deg,
+              #FFF2A6 54deg,
+              rgba(252, 252, 211, 0.161) 56deg,
+              transparent 58deg 90deg
+              ),
+              #FFF2A6;
+            -webkit-mask: linear-gradient(#FFFFFF 0 0) content-box, linear-gradient(#FFFFFF 0 0);
+            -webkit-mask-composite: xor;
+            mask: linear-gradient(#FFFFFF 0 0) content-box, linear-gradient(#FFFFFF 0 0);
+            mask-composite: exclude;
+            pointer-events: none;
+            animation: chatGoldOrbit 12s linear infinite;
+          }
+          @property --shine-angle {
+            syntax: "<angle>";
+            initial-value: 0deg;
+            inherits: false;
+          }
+          @keyframes chatGoldOrbit {
+            0% {
+              --shine-angle: 0deg;
+            }
+            100% {
+              --shine-angle: 360deg;
+            }
+          }
+          @keyframes chatGoldPulse {
+            0%, 100% {
+              box-shadow: inset 0 0 0 5.4px #FFF2A6, inset 0 0 10px rgba(255, 242, 166, 0.4), 8px 8px 0 #1B2B44;
+            }
+            50% {
+              box-shadow: inset 0 0 0 5.4px #FFF8C4, inset 0 0 18px rgba(255, 242, 166, 0.78), 8px 8px 0 #1B2B44;
+            }
+          }
           /* Ava: gentle floating hover with small, irregular "human" micro
              movements — a slow vertical drift, a barely-there rotation, and
              a subtle breathing scale, each on slightly different timing so
