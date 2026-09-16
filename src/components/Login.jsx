@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { authenticateDemoUser, registerUser, DEMO_USERS } from "../auth/demoUsers";
+import { hasSupabaseConfig, supabase } from "../lib/supabase";
 import logoUrl from "../assets/tasklocal-logo.png";
 
 export default function Login({ onLogin }) {
@@ -10,8 +11,17 @@ export default function Login({ onLogin }) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
-  function handleSignIn(event) {
+  async function handleSignIn(event) {
     event.preventDefault();
+    if (supabase) {
+      setError("");
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (authError) setError(authError.message);
+      return;
+    }
     const user = authenticateDemoUser(email, password);
     if (!user) {
       setError("Incorrect email or password.");
@@ -21,8 +31,23 @@ export default function Login({ onLogin }) {
     onLogin(user);
   }
 
-  function handleSignUp(event) {
+  async function handleSignUp(event) {
     event.preventDefault();
+    if (supabase) {
+      setError("");
+      const { error: authError } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: { data: { display_name: name.trim() } },
+      });
+      if (authError) {
+        setError(authError.message);
+      } else {
+        setNotice("Check your email to confirm your account, then sign in.");
+        setMode("signin");
+      }
+      return;
+    }
     try {
       const user = registerUser(email, password, name);
       setError("");
@@ -134,9 +159,11 @@ export default function Login({ onLogin }) {
         </form>
 
         <p className="login-notice">
-          {mode === "signin"
-            ? "Frontend demo only. This is not secure authentication yet."
-            : "New accounts are saved in this browser only -- not shared across devices yet."}
+          {notice || (hasSupabaseConfig
+            ? "Sign in with your TaskLocal account."
+            : mode === "signin"
+            ? "Frontend demo only. Configure Supabase to enable real accounts."
+            : "New accounts are saved in this browser only -- not shared across devices yet.")}
         </p>
       </section>
     </main>

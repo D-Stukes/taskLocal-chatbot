@@ -1,7 +1,9 @@
 import TaskLocalDashboard3Col from "./components/TaskLocalDashboard3Col";
 import Login from "./components/Login";
 import SplashIntro from "./components/SplashIntro";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { hasSupabaseConfig, supabase } from "./lib/supabase";
+import { authenticateDemoUser } from "./auth/demoUsers";
 
 const SESSION_KEY = "tasklocal-demo-session";
 
@@ -13,6 +15,7 @@ export default function App() {
       return null;
     }
   });
+  const [authLoading, setAuthLoading] = useState(hasSupabaseConfig);
   // Show the jingle splash once per tab. sessionStorage keeps a soft reload
   // (or any App re-render) from replaying it, while a brand-new visit still
   // gets the intro.
@@ -24,15 +27,42 @@ export default function App() {
     }
   });
 
+  useEffect(() => {
+    if (!supabase) return undefined;
+    let mounted = true;
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      setUser(session?.user ?? null);
+      setAuthLoading(false);
+    });
+
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setAuthLoading(false);
+    });
+
+    return () => {
+      mounted = false;
+      data.subscription.unsubscribe();
+    };
+  }, []);
+
   function handleLogin(nextUser) {
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(nextUser));
     setUser(nextUser);
   }
 
   function handleLogout() {
-    sessionStorage.removeItem(SESSION_KEY);
+    if (supabase) {
+      supabase.auth.signOut();
+    } else {
+      sessionStorage.removeItem(SESSION_KEY);
+    }
     setUser(null);
   }
+
+  if (authLoading) return null;
 
   if (!introDone) {
     return (
