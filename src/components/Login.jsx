@@ -131,10 +131,8 @@ export default function Login({ onLogin }) {
         </form>
 
         <div className="demo-credentials">
-          <strong>Demo credentials (same password for all)</strong>
-          {DEMO_USERS.map((user) => (
-            <span key={user.email}>{user.email}</span>
-          ))}
+          <strong>Demo account</strong>
+          <span>{DEMO_USERS[0].email}</span>
           <span>Password: {DEMO_USERS[0].password}</span>
           <button type="button" className="demo-fill" onClick={useDemoCredentials}>
             Use demo account
